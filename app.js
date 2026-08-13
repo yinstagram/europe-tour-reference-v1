@@ -2,6 +2,7 @@
   'use strict';
 
   const DATA = window.EUROPE_TOUR;
+  const MEDIA = window.EUROPE_MEDIA || {};
   const view = document.getElementById('view');
   const root = document.documentElement;
   const params = new URLSearchParams(location.search);
@@ -47,6 +48,23 @@
     } catch (_) {
       return '';
     }
+  }
+
+  function mediaFor(item) {
+    return item && MEDIA[item.title] ? MEDIA[item.title] : null;
+  }
+
+  function mediaBlock(item) {
+    const media = mediaFor(item);
+    if (!media) return '';
+    const image = safeUrl(media.image);
+    const source = safeUrl(media.source);
+    const menu = safeUrl(media.menuUrl);
+    if (!image) return '';
+    return `<figure class="activity-media ${media.kind === 'food' ? 'is-food' : ''}">
+      <img src="${esc(image)}" alt="${esc(media.alt || item.title)}" loading="lazy" decoding="async">
+      <figcaption><span>${esc(media.caption || '相片參考')} · ${esc(media.author || 'Wikimedia Commons')} · ${esc(media.license || '')}</span><span class="media-links">${source ? `<a href="${esc(source)}" target="_blank" rel="noopener">出處 ↗</a>` : ''}${menu ? `<a href="${esc(menu)}" target="_blank" rel="noopener">餐牌／官方頁 ↗</a>` : ''}</span></figcaption>
+    </figure>`;
   }
 
   function mapsUrl(item) {
@@ -293,6 +311,7 @@
     const body = item.description || item.verifiedNote || item.sourceNote || '';
     return `<article class="card activity">
       <div class="activity-head"><div><h3>${esc(item.title)}</h3>${item.officialName && item.officialName !== item.title ? `<small>${esc(item.officialName)}</small>` : ''}</div>${truthBadge(item.status)}</div>
+      ${mediaBlock(item)}
       <div class="activity-body">
         ${body ? `<p>${esc(body)}</p>` : ''}
         <div class="fact-grid">
@@ -443,14 +462,26 @@
     });
   }
 
+  function mediaSources() {
+    const seen = new Set();
+    return Object.values(MEDIA).filter(media => {
+      const source = safeUrl(media.source);
+      if (!source || seen.has(source)) return false;
+      seen.add(source);
+      return true;
+    });
+  }
+
   function renderVerify() {
     const unresolved = DATA.issues.filter(issue => issue.status !== 'resolved');
     const references = referenceSources();
+    const imageSources = mediaSources();
     view.innerHTML = `<header class="page-head"><h1>查證中心</h1><p>所有「已查證」只代表官方 public information；機票、酒店、包車同門票仍要以你收到嘅正式 booking record 為準。</p></header>
       <section class="card notice ${unresolved.length ? 'is-critical' : 'is-good'}"><span class="notice-icon">${unresolved.length ? '!' : '✓'}</span><div><strong>${unresolved.length ? `${unresolved.length} 個核心問題未解決` : '核心問題已解決'}</strong><p>最後資料核查：${esc(DATA.meta.verifiedAt)}。V1 無做任何 booking、付款或對外聯絡。</p></div></section>
       <section class="section"><div class="section-head"><h2>矛盾／待確認</h2><p>先處理紅色，先至可以升級 V2</p></div><div class="issue-list">${DATA.issues.map(issueCard).join('')}</div></section>
       <section class="section"><div class="section-head"><h2>航班原稿</h2><p>route page ≠ date-specific ticket</p></div><div class="flight-grid">${DATA.flights.map(flightCard).join('')}</div></section>
       <section class="section"><div class="section-head"><h2>實用資料</h2><p>跨國共通</p></div><div class="issue-list">${(DATA.practical || []).map((item, index) => `<article class="card issue-card"><span class="issue-number">${index + 1}</span><div><div style="display:flex;justify-content:space-between;gap:10px"><h3>${esc(item.title)}</h3>${truthBadge(item.status)}</div><p>${esc(item.detail)}</p>${item.officialUrl ? `<div class="button-row"><a class="button ghost" href="${esc(safeUrl(item.officialUrl))}" target="_blank" rel="noopener">↗ 官方來源</a></div>` : ''}</div></article>`).join('')}</div></section>
+      <section class="section"><div class="section-head"><h2>相片出處／授權</h2><p>${imageSources.length} 張 Commons 相片；節點卡片亦有逐張 attribution</p></div><div class="reference-list">${imageSources.map(media => `<article class="card reference-row"><b>${esc(media.caption || '相片參考')}</b><span>${esc(media.author || '')} · ${esc(media.license || '')}</span><a href="${esc(safeUrl(media.source))}" target="_blank" rel="noopener">原始頁 ↗</a></article>`).join('')}</div></section>
       <section class="section"><div class="section-head"><h2>官方來源索引</h2><p>${references.length} 條已驗證 URL</p></div><div class="reference-list">${references.map(source => `<article class="card reference-row"><b>${esc(source.label)}</b><span>${esc(source.url)}</span><a href="${esc(source.url)}" target="_blank" rel="noopener">開啟 ↗</a></article>`).join('')}</div></section>`;
     bindDynamic();
   }

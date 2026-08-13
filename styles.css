@@ -620,6 +620,12 @@ a { color: inherit; }
 .activity-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 17px 10px; }
 .activity-head h3 { margin: 0; font-size: .98rem; line-height: 1.25; }
 .activity-head small { display: block; margin-top: 4px; color: var(--muted); font-size: .66rem; }
+.activity-media { margin: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel-solid); }
+.activity-media img { display: block; width: 100%; aspect-ratio: 16 / 8; object-fit: cover; }
+.activity-media.is-food img { aspect-ratio: 16 / 9; }
+.activity-media figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px; padding: 8px 17px 9px; color: var(--muted); font-size: .61rem; line-height: 1.35; }
+.activity-media figcaption a { color: var(--brass); font-weight: 750; text-decoration: none; white-space: nowrap; }
+.media-links { display: flex; flex-wrap: wrap; gap: 9px; }
 .activity-body { padding: 0 17px 16px; }
 .activity-body p { margin: 0 0 10px; color: var(--muted); font-size: .76rem; }
 .fact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
@@ -743,6 +749,7 @@ a { color: inherit; }
   .timeline-time { padding-top: 17px; font-size: .6rem; }
   .activity-head { display: block; padding: 14px 14px 8px; }
   .activity-head .truth-badge { margin-top: 8px; }
+  .activity-media figcaption { padding-right: 14px; padding-left: 14px; }
   .activity-body { padding: 0 14px 14px; }
   .fact-grid { grid-template-columns: 1fr; }
   .route-board { padding: 16px; }
@@ -765,7 +772,7 @@ a { color: inherit; }
   }
   @page { size: A4; margin: 12mm 11mm 14mm; }
   body { background: #fff; font-size: 10pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .topbar, .tabbar, .skip-link, .no-print, .day-nav { display: none !important; }
+  .topbar, .tabbar, .skip-link, .no-print, .day-nav, .activity-media { display: none !important; }
   #view { width: 100%; max-width: none; padding: 0; }
   .print-only { display: block; }
   .print-cover { display: flex; min-height: 255mm; flex-direction: column; justify-content: end; padding: 20mm; border-radius: 0; page-break-after: always; }
