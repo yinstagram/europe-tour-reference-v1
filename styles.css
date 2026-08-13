@@ -573,6 +573,39 @@ a { color: inherit; }
 .detail-hero h1 { max-width: 760px; margin: 0; font-family: "Iowan Old Style", "Songti TC", Georgia, serif; font-size: clamp(2rem, 6vw, 4rem); line-height: 1; }
 .detail-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; color: rgba(255,250,240,.75); font-size: .74rem; }
 
+.day-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin: clamp(24px, 5vw, 38px) 0 10px;
+}
+.day-nav-button {
+  display: flex;
+  min-width: 0;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  padding: 15px 17px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-small);
+  transition: border-color .18s, background .18s, transform .12s;
+}
+.day-nav-button.next { align-items: flex-end; text-align: right; }
+.day-nav-button:hover:not(:disabled) { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 8%, var(--panel)); }
+.day-nav-button:active:not(:disabled) { transform: scale(.99); }
+.day-nav-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--teal) 70%, transparent); outline-offset: 3px; }
+.day-nav-button:disabled { cursor: default; opacity: .48; box-shadow: none; }
+.day-nav-button span { color: var(--brass); font-size: .68rem; font-weight: 850; letter-spacing: .04em; }
+.day-nav-button strong { color: var(--muted); font-size: .65rem; font-weight: 700; }
+.day-nav-button b { max-width: 100%; overflow: hidden; color: var(--ink); font-size: .84rem; font-weight: 750; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+
 .day-overview { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
 .overview-card { padding: 18px; }
 .overview-card h3 { margin: 0 0 8px; font-size: .8rem; }
@@ -732,7 +765,7 @@ a { color: inherit; }
   }
   @page { size: A4; margin: 12mm 11mm 14mm; }
   body { background: #fff; font-size: 10pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .topbar, .tabbar, .skip-link, .no-print { display: none !important; }
+  .topbar, .tabbar, .skip-link, .no-print, .day-nav { display: none !important; }
   #view { width: 100%; max-width: none; padding: 0; }
   .print-only { display: block; }
   .print-cover { display: flex; min-height: 255mm; flex-direction: column; justify-content: end; padding: 20mm; border-radius: 0; page-break-after: always; }

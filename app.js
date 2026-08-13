@@ -311,6 +311,27 @@
     </article>`;
   }
 
+  function dayNavigation(day, options = {}) {
+    if (options.print) return '';
+    const index = DATA.days.findIndex(item => item.id === day.id);
+    const previous = index > 0 ? DATA.days[index - 1] : null;
+    const next = index >= 0 && index < DATA.days.length - 1 ? DATA.days[index + 1] : null;
+    const button = (item, direction, edgeLabel) => item ? `
+      <button class="day-nav-button ${direction}" type="button" data-day="${esc(item.id)}" aria-label="${direction === 'previous' ? '前往上一日' : '前往下一日'}：${esc(item.title)}">
+        <span>${direction === 'previous' ? '‹ 上一日' : '下一日 ›'}</span>
+        <strong>DAY ${esc(item.number)} · ${esc(item.dateLabel)}</strong>
+        <b>${esc(item.title)}</b>
+      </button>` : `
+      <button class="day-nav-button ${direction}" type="button" disabled aria-disabled="true">
+        <span>${direction === 'previous' ? '‹ 上一日' : '下一日 ›'}</span>
+        <strong>${esc(edgeLabel)}</strong>
+      </button>`;
+    return `<nav class="day-nav" aria-label="前後日行程">
+      ${button(previous, 'previous', '已經係第一日')}
+      ${button(next, 'next', '已經係最後一日')}
+    </nav>`;
+  }
+
   function renderDayDetail(id, options = {}) {
     const day = DATA.days.find(item => item.id === id);
     if (!day) { renderDays(); return; }
@@ -333,7 +354,8 @@
         <div class="timeline">${(day.activities || []).map(item => `<div class="timeline-item"><div class="timeline-time">${esc(item.time || '待定')}</div>${activityCard(item)}</div>`).join('')}</div>
       </section>
       ${hotels.length ? `<section class="section"><div class="section-head"><h2>當晚住宿</h2><p>alternative 唔等同 confirmed</p></div><div class="hotel-grid">${hotels.map(hotelCard).join('')}</div></section>` : ''}
-      ${day.prep ? `<section class="section"><div class="card notice is-good"><span class="notice-icon">＋</span><div><strong>出門／轉場前</strong><p>${esc(day.prep)}</p></div></div></section>` : ''}`;
+      ${day.prep ? `<section class="section"><div class="card notice is-good"><span class="notice-icon">＋</span><div><strong>出門／轉場前</strong><p>${esc(day.prep)}</p></div></div></section>` : ''}
+      ${dayNavigation(day, options)}`;
 
     if (options.returnHtml) return `<article class="print-day">${content}</article>`;
     view.innerHTML = content;

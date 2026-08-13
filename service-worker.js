@@ -1,11 +1,11 @@
 /* Europe Tour Reference V1 — app shell and itinerary data work offline. */
-const CACHE = 'europe-tour-reference-v1.0.2';
+const CACHE = 'europe-tour-reference-v1.0.3';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=1.0.2',
-  './data.js?v=1.0.2',
-  './app.js?v=1.0.2',
+  './styles.css?v=1.0.3',
+  './data.js?v=1.0.3',
+  './app.js?v=1.0.3',
   './manifest.json',
   './icons/icon.svg',
   './icons/icon-192.png',
