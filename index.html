@@ -8,22 +8,23 @@
   <meta name="apple-mobile-web-app-title" content="Europe Tour">
   <meta name="theme-color" content="#172529" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#f3eee4" media="(prefers-color-scheme: light)">
-  <meta name="description" content="2026 荷蘭、比利時、法國、瑞士 16 日詳細行程參考網站">
-  <title>Europe 2026 · Reference V1</title>
+  <meta name="description" content="2026 荷蘭、比利時、法國、瑞士 15 日行程決策網站">
+  <title>Europe 2026 · 行程決策版</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=1.0.4">
+  <link rel="stylesheet" href="styles.css?v=1.2.0">
+  <link rel="stylesheet" href="decision-checklist.css?v=1.2.0">
 </head>
 <body>
   <a class="skip-link" href="#view">跳到主要內容</a>
   <header class="topbar">
-    <button class="brand" type="button" data-go="now" aria-label="返回此刻">
+    <button class="brand" type="button" data-go="decide" aria-label="返回星期日前準備">
       <span class="brand-flags" aria-hidden="true">🇳🇱 🇧🇪 🇫🇷 🇨🇭</span>
       <span>Europe <em>2026</em></span>
     </button>
     <div class="top-actions">
-      <span class="version-chip">REFERENCE V1</span>
+      <span class="version-chip">互動決策版</span>
       <button id="fontDown" class="icon-button" type="button" aria-label="縮細字體">A−</button>
       <button id="fontUp" class="icon-button" type="button" aria-label="放大字體">A＋</button>
       <button id="themeBtn" class="icon-button" type="button" aria-label="切換深淺色">◐</button>
@@ -33,7 +34,8 @@
   <main id="view" tabindex="-1" aria-live="polite"></main>
 
   <nav class="tabbar" id="tabbar" aria-label="主要導覽">
-    <button class="tab is-active" type="button" data-tab="now"><span aria-hidden="true">⌁</span><b>此刻</b></button>
+    <button class="tab is-active" type="button" data-tab="decide"><span aria-hidden="true">◎</span><b>準備</b></button>
+    <button class="tab" type="button" data-tab="now"><span aria-hidden="true">⌁</span><b>此刻</b></button>
     <button class="tab" type="button" data-tab="days"><span aria-hidden="true">▦</span><b>行程</b></button>
     <button class="tab" type="button" data-tab="route"><span aria-hidden="true">⌖</span><b>地圖</b></button>
     <button class="tab" type="button" data-tab="stays"><span aria-hidden="true">▰</span><b>住宿</b></button>
@@ -41,12 +43,18 @@
   </nav>
 
   <noscript>呢個行程網站需要 JavaScript 先可以顯示。所有資料亦會輸出到隨附 PDF。</noscript>
-  <script src="data.js?v=1.0.4"></script>
-  <script src="media.js?v=1.0.4"></script>
-  <script src="app.js?v=1.0.4"></script>
+  <script src="data.js?v=1.2.0"></script>
+  <script src="media.js?v=1.2.0"></script>
+  <script src="questionnaire-data.js?v=1.2.0"></script>
+  <script src="questionnaire-config.js?v=1.2.0"></script>
+  <script src="questionnaire.js?v=1.2.0"></script>
+  <script src="decision-data.js?v=1.2.0"></script>
+  <script src="airbnb-research.js?v=1.2.0"></script>
+  <script src="decision-checklist.js?v=1.2.0"></script>
+  <script src="app.js?v=1.2.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+      navigator.serviceWorker.register('service-worker.js?v=1.2.0').catch(() => {});
     }
   </script>
 </body>

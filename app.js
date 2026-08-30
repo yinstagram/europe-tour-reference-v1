@@ -2,16 +2,26 @@
   'use strict';
 
   const DATA = window.EUROPE_TOUR;
+  const DECISION = window.EUROPE_DECISION_DATA;
   const MEDIA = window.EUROPE_MEDIA || {};
   const view = document.getElementById('view');
   const root = document.documentElement;
   const params = new URLSearchParams(location.search);
+  const ROUTE_DECISION_KEY = 'europe_route_pace_decision';
   const state = {
-    tab: 'now',
+    tab: 'decide',
     country: 'all',
     search: '',
     selectedDay: null
   };
+
+  if (window.EUROPE_QUESTIONNAIRE_APP?.matchesCurrentUrl()) {
+    window.EUROPE_QUESTIONNAIRE_APP.start();
+    window.addEventListener('hashchange', () => {
+      if (!window.EUROPE_QUESTIONNAIRE_APP?.matchesCurrentUrl()) window.location.reload();
+    });
+    return;
+  }
 
   if (!DATA) {
     view.innerHTML = '<div class="card empty"><strong>行程資料未載入</strong><p>請確認 data.js 同 index.html 放喺同一個 folder。</p></div>';
@@ -131,23 +141,23 @@
     const after = dateDistance(DATA.meta.endDate, info.date);
 
     if (day) {
-      headline = `旅程第 ${day.number + 1} 日`;
+      headline = day.number === 0 ? '出發前一晚' : `旅程第 ${day.number} 日`;
       subline = `${day.dateLabel} · ${countryOf(day.country).flag} ${day.title}`;
     } else if (before > 0) {
       headline = `出發前 ${before} 日`;
-      subline = `${DATA.meta.dateRange} · 四國 16 日 Reference V1`;
+      subline = `${DATA.meta.dateRange} · 四國 15 日行程決策版`;
     } else if (after > 0) {
       headline = '旅程已完成';
       subline = `${DATA.meta.dateRange} · 保留作詳細行程記錄`;
     } else {
-      headline = '16 日歐洲行程';
+      headline = '15 日歐洲行程';
       subline = `${DATA.meta.dateRange} · 荷蘭 → 比利時 → 法國 → 瑞士`;
     }
 
     return `<section class="hero">
-      <div class="hero-stamp">OFFICIAL<br>SOURCES<br>CHECKED</div>
+      <div class="hero-stamp">部分官方資料<br>已核對<br>訂位仍未證實</div>
       <div class="hero-inner">
-        <p class="eyebrow">EUROPE · REFERENCE VERSION 1</p>
+        <p class="eyebrow">EUROPE 2026</p>
         <h1>${esc(headline)}</h1>
         <div class="hero-sub"><span>${esc(subline)}</span><span>最後核查 ${esc(DATA.meta.verifiedAt)}</span></div>
       </div>
@@ -181,14 +191,14 @@
         <div class="card now-panel">
           <div class="now-kicker"><span>${info.mock ? '🧪 測試時刻' : '⌁ 行前總覽'}</span><time>${esc(info.date)} ${esc(info.time)}</time></div>
           <div class="now-grid">
-            <div class="now-cell is-focus"><span>下一個固定動作</span><p><b>向旅行社確認</b> 年份、酒店選擇、Day 9 分支同正式 booking。</p></div>
+            <div class="now-cell is-focus"><span>下一個固定動作</span><p><b>向旅行社確認</b> 正式去回日期、逐站住宿、暫定 10 月 27 日法國主線同全程車務。</p></div>
             <div class="now-cell"><span>航班</span><p>PDF 列出 4 段 Emirates，但回程時間互相矛盾。</p></div>
-            <div class="now-cell"><span>住宿</span><p>${DATA.hotels.filter(h => h.status === 'unknown' || h.status === 'alternative').length} 項仍屬 alternative／未指定。</p></div>
-            <div class="now-cell is-alert"><span>待確認</span><p><b>${unresolved.length}</b> 個關鍵問題未有 booking evidence。</p></div>
+            <div class="now-cell"><span>住宿</span><p>修訂版住宿建議有 ${DATA.hotels.filter(h => h.status === 'revised-pdf').length} 間候選，其中 ${DATA.hotels.filter(h => h.access === 'red').length} 間已建議換走；另有 ${DATA.hotels.filter(h => h.status === 'unknown').length} 個住宿問題未解決。</p></div>
+            <div class="now-cell is-alert"><span>待確認</span><p><b>${unresolved.length}</b> 個關鍵問題未有書面證明。</p></div>
           </div>
-          <div class="prep-row"><b>V1 用法</b><span>藍色係 PDF 原稿；綠色係官方查證；橙色係規劃推斷；紅色一定要再確認。</span></div>
+          <div class="prep-row"><b>點睇資料狀態</b><span>藍色係 PDF／通話原稿；綠色係官方查證；橙色係規劃推斷；紅色一定要再確認。</span></div>
           <div class="button-row">
-            <button class="button primary" type="button" data-go="days">睇 16 日詳細行程</button>
+            <button class="button primary" type="button" data-go="days">睇 ${DATA.days.length} 個日程</button>
             <button class="button ghost" type="button" data-go="verify">先睇矛盾同待確認</button>
           </div>
         </div>
@@ -196,7 +206,7 @@
     }
 
     const live = timelineState(day, info);
-    const attention = live.current?.warning || live.next?.warning || day.risk || (day.activities || []).find(item => item.warning)?.warning || '跟當日時間線行；所有 booking 以最新確認文件為準。';
+    const attention = live.current?.warning || live.next?.warning || day.risk || (day.activities || []).find(item => item.warning)?.warning || '跟當日時間線行；所有安排以最新書面確認為準。';
     return `<section class="section">
       <div class="card now-panel">
         <div class="now-kicker"><span>${info.mock ? '🧪 測試此刻' : '⌁ 此刻助手'}</span><time>${esc(day.dateLabel)} ${esc(info.time)}</time></div>
@@ -206,12 +216,12 @@
           <div class="now-cell"><span>今晚</span><p>${compactActivity(live.tonight, day.hotelSummary || '跟最新酒店確認')}</p></div>
           <div class="now-cell is-alert"><span>即時關注</span><p>${esc(attention)}</p></div>
         </div>
-        <div class="prep-row"><b>出門／轉場前</b><span>${esc(day.prep || '護照、手機、充電、當日 booking 截圖同薄外套。')}</span></div>
+        <div class="prep-row"><b>出門／轉場前</b><span>${esc(day.prep || '護照、手機、充電、當日確認文件截圖同薄外套。')}</span></div>
         <div class="button-row">
           <button class="button primary" type="button" data-day="${esc(day.id)}">睇今日全部</button>
-          <button class="button ghost" type="button" data-notify="${esc(day.id)}">開今日提醒</button>
+          <button class="button ghost" type="button" data-notify="${esc(day.id)}">測試今日通知</button>
         </div>
-        <p class="muted tiny">提醒屬 best-effort；靜態 PWA 無 backend，關閉 app 後唔保證仍會響。</p>
+        <p class="muted tiny">呢個按鈕只會即時測試一個 notification；真正時間提示要保持 app 開住睇「此刻」。靜態 PWA 無 closed-app push。</p>
       </div>
     </section>`;
   }
@@ -223,10 +233,10 @@
     return `<section class="section">
       <div class="section-head"><h2>一眼睇晒</h2><p>原稿同官方資料分開保存</p></div>
       <div class="summary-grid">
-        <div class="card summary-card"><div class="number">16</div><div class="label">日 · 2026/10/16–31</div><div class="mini">4 國 + 杜拜轉機</div></div>
+        <div class="card summary-card"><div class="number">${DATA.meta.tripDays}</div><div class="label">日旅程 · ${esc(DATA.meta.dateRange)}</div><div class="mini">另有出發前一晚準備</div></div>
         <div class="card summary-card"><div class="number">${activities.length}</div><div class="label">行程節點</div><div class="mini">每項有地址／Maps</div></div>
         <div class="card summary-card"><div class="number" style="color:var(--green)">${verified}</div><div class="label">已連官方來源</div><div class="mini">核查日 ${esc(DATA.meta.verifiedAt)}</div></div>
-        <div class="card summary-card"><div class="number" style="color:var(--red)">${unknown}</div><div class="label">待確認訊號</div><div class="mini">唔會假裝已 booking</div></div>
+        <div class="card summary-card"><div class="number" style="color:var(--red)">${unknown}</div><div class="label">待確認訊號</div><div class="mini">冇書面證明就唔當完成</div></div>
       </div>
     </section>`;
   }
@@ -249,11 +259,78 @@
     const day = currentDay(info);
     const critical = DATA.issues.filter(issue => issue.severity === 'critical' && issue.status !== 'resolved').length;
     view.innerHTML = `${renderHero(info, day)}
-      ${critical ? `<section class="section"><div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>${critical} 個出發前一定要解決嘅矛盾</strong><p>包括航班時間、Eiffel 團體票、Dijon／Day 9 住宿同未決路線；已經集中放喺「查證」。</p></div></div></section>` : ''}
+      ${renderCallUpdate()}
+      ${critical ? `<section class="section"><div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>${critical} 個出發前一定要解決嘅矛盾</strong><p>包括航班時間、巴黎鐵塔、暫定 10 月 27 日法國主線同逐站住宿；已經集中放喺「查證」。</p></div></div></section>` : ''}
       ${renderNowPanel(day, info)}
       ${renderSummary()}
       ${renderCountryStrip()}`;
     bindDynamic();
+  }
+
+  function routeDecisionById(id) {
+    const decision = DATA.routeDecision;
+    return decision && decision.options ? decision.options.find(option => option.id === id) || null : null;
+  }
+
+  function savedRouteDecision() {
+    try {
+      return routeDecisionById(localStorage.getItem(ROUTE_DECISION_KEY));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function renderRouteDecision() {
+    const decision = DATA.routeDecision;
+    if (!decision || !Array.isArray(decision.options)) return '';
+    const selected = savedRouteDecision();
+    return `<section class="section decision-panel" id="route-decision" aria-labelledby="route-decision-title">
+      <div class="card decision-card">
+        <div class="decision-head">
+          <p class="decision-kicker">你而家只要做一件事</p>
+          <h2 id="route-decision-title">${esc(decision.title)}</h2>
+          <p>${esc(decision.intro)}</p>
+        </div>
+        <fieldset class="decision-options">
+          <legend class="sr-only">揀今次行程節奏</legend>
+          ${decision.options.map(option => `<label class="decision-option ${selected?.id === option.id ? 'is-selected' : ''}">
+            <input type="radio" name="route-pace" value="${esc(option.id)}" data-route-decision ${selected?.id === option.id ? 'checked' : ''}>
+            <span class="decision-option-copy">
+              <span class="decision-option-title">${esc(option.title)}${option.recommended ? '<span class="decision-recommended">我建議</span>' : ''}</span>
+              <span class="decision-option-summary">${esc(option.summary)}</span>
+              <span class="decision-points">${option.points.map(point => `<span>${esc(point)}</span>`).join('')}</span>
+            </span>
+          </label>`).join('')}
+        </fieldset>
+        <div class="decision-answer" aria-live="polite">
+          <div>
+            <span class="decision-answer-label">你嘅答案</span>
+            <strong data-route-answer-title>${selected ? esc(selected.title) : '未揀'}</strong>
+            <p data-route-answer-copy>${selected ? esc(selected.answer) : '撳上面其中一個選擇，我會幫你整理成一句可以直接回覆嘅答案。'}</p>
+          </div>
+          <div class="decision-answer-action">
+            <button class="button primary" type="button" data-copy-route-decision ${selected ? '' : 'disabled'}>複製答案，貼返呢個對話</button>
+            <span class="muted tiny" data-route-copy-feedback>選擇只會留喺你部裝置，唔會自動訂位、付款或送出。</span>
+          </div>
+        </div>
+        <details class="decision-later">
+          <summary>之後仲有 ${decision.later.length} 樣資料，唔使而家一次過答</summary>
+          <div class="decision-later-list">${decision.later.map((item, index) => `<div><b>${index + 1}</b><span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span></div>`).join('')}</div>
+        </details>
+      </div>
+    </section>`;
+  }
+
+  function renderCallUpdate() {
+    const update = DATA.callUpdate;
+    if (!update) return '';
+    return `<details class="section card call-summary">
+      <summary>通話已經幫你答咗嘅資料</summary>
+      <div class="call-summary-body">
+        <p>${esc(update.source)}</p>
+        <ul>${update.confirmed.map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+      </div>
+    </details>`;
   }
 
   function daySearchText(day) {
@@ -267,7 +344,7 @@
     const chips = [
       `${country.flag} ${country.name}`,
       `${(day.activities || []).length} 個節點`,
-      statuses.has('unknown') ? '! 有待確認' : '✓ 已整理'
+      statuses.has('unknown') ? '! 有待確認' : '資料已整理｜預訂未確認'
     ];
     return `<button class="day-card" type="button" data-day="${esc(day.id)}">
       <span class="day-date"><small>DAY ${day.number}</small><strong>${esc(day.dayOfMonth)}</strong><span>${esc(day.monthLabel)} · ${esc(day.dow)}</span></span>
@@ -283,13 +360,14 @@
       const searchOk = !state.search || daySearchText(day).includes(state.search.toLowerCase());
       return countryOk && searchOk;
     });
-    view.innerHTML = `<header class="page-head"><h1>16 日行程</h1><p>每一日保留 PDF 原稿，再疊加正確名稱、完整地址、官方連結、開放／預約提示同可行性判斷。</p></header>
+    view.innerHTML = `<header class="page-head"><h1>行程總覽</h1><p>Day 0 至 Day ${DATA.days.length - 1}；每一日保留 PDF／通話原稿，再疊加正確名稱、完整地址、官方連結、開放／預約提示同可行性判斷。</p></header>
+      <div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>全部日期同星期幾都只係暫定</strong><p>目前未有正式電子機票；每日資料整理好，唔代表航班、車、住宿或門票已確認。</p></div></div>
       <label class="search-wrap"><span>⌕</span><input id="daySearch" class="search-input" type="search" value="${esc(state.search)}" placeholder="搜尋城市、景點、地址…" aria-label="搜尋行程"></label>
       <div class="filterbar">${countries.map(code => {
-        const label = code === 'all' ? '全部 16 日' : `${countryOf(code).flag} ${countryOf(code).name}`;
+        const label = code === 'all' ? '全部行程' : `${countryOf(code).flag} ${countryOf(code).name}`;
         return `<button class="filter-chip ${state.country === code ? 'is-active' : ''}" type="button" data-country="${code}">${label}</button>`;
       }).join('')}</div>
-      <div class="day-list">${filtered.length ? filtered.map(dayCard).join('') : '<div class="card empty"><strong>搵唔到相符行程</strong><p>試下清除搜尋字或轉返「全部 16 日」。</p></div>'}</div>`;
+      <div class="day-list">${filtered.length ? filtered.map(dayCard).join('') : '<div class="card empty"><strong>搵唔到相符行程</strong><p>試下清除搜尋字或轉返「全部日程」。</p></div>'}</div>`;
     bindDynamic();
     const search = document.getElementById('daySearch');
     if (search) search.addEventListener('input', event => {
@@ -315,6 +393,7 @@
       <div class="activity-body">
         ${body ? `<p>${esc(body)}</p>` : ''}
         <div class="fact-grid">
+          ${fact('行程角色', item.priority)}
           ${fact('地址', item.address)}
           ${fact('建議停留', item.duration)}
           ${fact('開放／季節', item.hours)}
@@ -325,7 +404,7 @@
           ${map ? `<a class="button ghost" href="${esc(map)}" target="_blank" rel="noopener">⌖ Google Maps</a>` : ''}
           ${official ? `<a class="button ghost" href="${esc(official)}" target="_blank" rel="noopener">↗ 官方網站</a>` : ''}
         </div>
-        <div class="source-note">${item.status === 'source' ? 'PDF 原稿資料，未等同正式 booking。' : item.status === 'verified' ? `官方資料核查：${esc(item.verifiedAt || DATA.meta.verifiedAt)}。` : item.status === 'inference' ? '規劃推斷：用嚟判斷動線，唔係供應商承諾。' : '未能由官方資料確認；出發前必須再問旅行社／供應商。'}${source ? ` <a href="${esc(source)}" target="_blank" rel="noopener">來源</a>` : ''}</div>
+        <div class="source-note">${item.status === 'source' ? '舊文件資料，唔等同正式確認。' : item.status === 'verified' ? `官方公開資料核查：${esc(item.verifiedAt || DATA.meta.verifiedAt)}；唔代表指定日期可用。` : item.status === 'inference' ? '行程推論：只用嚟判斷動線，唔係供應商承諾。' : '未能由官方資料確認；出發前必須再問旅行社／供應商。'}${source ? ` <a href="${esc(source)}" target="_blank" rel="noopener">來源</a>` : ''}</div>
       </div>
     </article>`;
   }
@@ -358,21 +437,22 @@
     const hotels = DATA.hotels.filter(hotel => (day.hotelRefs || []).includes(hotel.id));
     const country = countryOf(day.country);
     const content = `<section class="detail-hero">
-        ${options.print ? '' : '<button class="button ghost back-button" type="button" data-go="days">‹ 返回 16 日行程</button>'}
+        ${options.print ? '' : '<button class="button ghost back-button" type="button" data-go="days">‹ 返回行程</button>'}
         <p class="eyebrow">DAY ${day.number} · ${esc(day.dateLabel)} · ${country.flag} ${esc(country.name)}</p>
         <h1>${esc(day.title)}</h1>
         <div class="detail-meta"><span>${esc(day.subtitle || '')}</span><span>${(day.activities || []).length} 個節點</span><span>${esc(day.city || '')}</span></div>
       </section>
+      <section class="section"><div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>${esc(day.dateLabel)} 同 ${esc(day.dow)} 只係暫定</strong><p>未有正式電子機票；下面嘅時間、車、住宿同門票仍要逐項攞書面確認。</p></div></div></section>
       <section class="section day-overview">
         <div class="card overview-card"><h3>PDF 原稿</h3><p>${esc(day.sourceSummary || 'PDF 未提供額外細節。')}</p></div>
-        <div class="card overview-card"><h3>V1 判斷</h3><p>${esc(day.assessment || '跟 booking 同當日實際交通再調整。')}</p>${day.risk ? `<ul><li>${esc(day.risk)}</li></ul>` : ''}</div>
+        <div class="card overview-card"><h3>目前判斷</h3><p>${esc(day.assessment || '跟書面確認同當日實際交通再調整。')}</p>${day.risk ? `<ul><li>${esc(day.risk)}</li></ul>` : ''}</div>
       </section>
-      ${day.options?.length ? `<section class="section"><div class="card notice"><span class="notice-icon">↔</span><div><strong>呢一日有互斥選項</strong><p>${esc(day.options.join(' ／ '))}。未有決定前，兩條線都只係 reference。</p></div></div></section>` : ''}
+      ${day.options?.length ? `<section class="section"><div class="card notice"><span class="notice-icon">↔</span><div><strong>呢一日有互斥選項</strong><p>${esc(day.options.join(' ／ '))}。未有決定前，兩條線都只係候選，唔代表已預訂。</p></div></div></section>` : ''}
       <section class="section">
         <div class="section-head"><h2>當日時間線</h2><p>時間未有證據就標「待定」，唔會硬填</p></div>
         <div class="timeline">${(day.activities || []).map(item => `<div class="timeline-item"><div class="timeline-time">${esc(item.time || '待定')}</div>${activityCard(item)}</div>`).join('')}</div>
       </section>
-      ${hotels.length ? `<section class="section"><div class="section-head"><h2>當晚住宿</h2><p>alternative 唔等同 confirmed</p></div><div class="hotel-grid">${hotels.map(hotelCard).join('')}</div></section>` : ''}
+      ${hotels.length ? `<section class="section"><div class="section-head"><h2>當晚住宿</h2><p>候選住宿唔代表已確認預訂</p></div><div class="hotel-grid">${hotels.map(hotelCard).join('')}</div></section>` : ''}
       ${day.prep ? `<section class="section"><div class="card notice is-good"><span class="notice-icon">＋</span><div><strong>出門／轉場前</strong><p>${esc(day.prep)}</p></div></div></section>` : ''}
       ${dayNavigation(day, options)}`;
 
@@ -401,7 +481,8 @@
   function renderRoute() {
     const stops = routeStops();
     const places = allPlaces();
-    view.innerHTML = `<header class="page-head"><h1>全程地圖</h1><p>V1 用離線 schematic route 保留全程脈絡；每一站都有 deterministic Google Maps search，開網絡時直接導航。</p></header>
+    view.innerHTML = `<header class="page-head"><h1>全程地圖</h1><p>離線時先用簡化路線圖睇全程脈絡；每一站都有固定 Google Maps 搜尋，連線後可直接導航。</p></header>
+      <div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>路線次序同日期只係暫定</strong><p>未有正式電子機票、逐段車務同實際住宿證明，唔可以當已落實路線。</p></div></div>
       <section class="card route-board"><div class="route-scroll"><div class="route-track">${stops.map(stop => {
         const country = countryOf(stop.country);
         return `<div class="route-stop"><div class="route-dot">${country.flag}</div><b>${esc(stop.city)}</b><small>${esc(stop.date || '')}</small></div>`;
@@ -413,11 +494,13 @@
   function hotelCard(hotel) {
     const map = mapsUrl(hotel);
     const official = safeUrl(hotel.officialUrl);
-    const statusText = hotel.status === 'confirmed' ? '已確認' : hotel.status === 'alternative' ? 'PDF alternative' : hotel.status === 'proposed' ? 'PDF 建議' : '未指定／待確認';
+    const statusText = hotel.status === 'confirmed' ? '已確認' : hotel.status === 'revised-pdf' ? '修訂版 PDF 候選' : hotel.status === 'agency-proposal' ? '旅行社舊方案' : hotel.status === 'alternative' ? 'PDF 後備候選' : hotel.status === 'proposed' ? 'PDF 建議' : '未指定／待確認';
     const truth = hotel.status === 'confirmed' ? 'verified' : hotel.status === 'unknown' ? 'unknown' : 'source';
+    const accessText = hotel.access === 'green' ? '官網稱有相關房型｜今次房未證' : hotel.access === 'yellow' ? '出入條件待問' : hotel.access === 'red' ? '建議換走' : '';
+    const accessStyle = hotel.access === 'green' || hotel.access === 'yellow' ? 'color:var(--amber)' : hotel.access === 'red' ? 'color:var(--red)' : '';
     return `<article class="card hotel-card">
       <div class="hotel-top"><div class="hotel-city">${countryOf(hotel.country).flag} ${esc(hotel.city)} · ${esc(hotel.nights || '')}</div><h2>${esc(hotel.name)}</h2></div>
-      <div class="hotel-body"><div class="hotel-status"><span class="chip">${esc(statusText)}</span>${truthBadge(truth)}</div>
+      <div class="hotel-body"><div class="hotel-status"><span class="chip">${esc(statusText)}</span>${hotel.price ? `<span class="chip">舊方案片段價，不可比較／付款：${esc(hotel.price)}</span>` : ''}${accessText ? `<span class="chip" style="${accessStyle}">${esc(accessText)}</span>` : ''}${truthBadge(truth)}</div>
         <p>${esc(hotel.address || 'PDF 未提供酒店地址。')}</p>
         ${hotel.note ? `<p>${esc(hotel.note)}</p>` : ''}
         <div class="button-row">${map ? `<a class="button ghost" href="${esc(map)}" target="_blank" rel="noopener">⌖ Maps</a>` : ''}${official ? `<a class="button ghost" href="${esc(official)}" target="_blank" rel="noopener">↗ 官網</a>` : ''}</div>
@@ -426,19 +509,40 @@
   }
 
   function renderStays() {
-    view.innerHTML = `<header class="page-head"><h1>住宿總覽</h1><p>旅行社 PDF 列出嘅酒店只當 proposed／alternative；除非有 booking evidence，網站唔會顯示「已訂」。</p></header>
-      <div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>${DATA.hotels.filter(h => h.status !== 'confirmed').length} 間未有 booking evidence</strong><p>Dijon 更加只寫咗「Dijon Hotel」，V1 保留為未指定。</p></div></div>
-      <section class="section"><div class="hotel-grid">${DATA.hotels.map(hotelCard).join('')}</div></section>`;
+    const bases = DECISION?.stayBases || [];
+    const airbnb = window.EUROPE_AIRBNB_RESEARCH;
+    const airbnbSection = airbnb ? `
+      <section class="section"><div class="section-head"><h2>Airbnb 即時比較</h2><p>每張卡一撳就開預設好 5 人＋日期＋全間屋嘅 Airbnb 搜尋；現場同旅行社酒店報價直接比較</p></div>
+      <div class="quick-compare card" style="margin-bottom:16px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><b>🏨 酒店</b><ul style="margin:8px 0 0 16px;padding:0">${airbnb.quickCompare.hotel.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
+        <div><b>🏠 Airbnb</b><ul style="margin:8px 0 0 16px;padding:0">${airbnb.quickCompare.airbnb.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
+      </div>
+      <div class="hotel-grid">${airbnb.stops.map(stop => `<article class="card hotel-card" style="border-left:3px solid #e05b5b">
+        <div class="hotel-top"><div class="hotel-city">${esc(stop.country)} · ${esc(stop.dates)}</div><h2>${esc(stop.city)}</h2></div>
+        <div class="hotel-body">
+          <div class="hotel-status"><span class="chip">Airbnb</span><span class="chip">~${esc(stop.priceRange)}</span></div>
+          <p><b>酒店比較：</b>${esc(stop.hotelCompare)}</p>
+          <p><b>👍：</b>${esc(stop.pros)}</p>
+          <p><b>👎：</b>${esc(stop.cons)}</p>
+          <div class="button-row"><a class="button primary" style="text-decoration:none" href="${esc(stop.searchUrl)}" target="_blank" rel="noopener">🔍 開 Airbnb 搜尋</a></div>
+        </div>
+      </article>`).join('')}</div></section>` : '';
+
+    view.innerHTML = `<header class="page-head"><h1>逐站住宿研究</h1><p>以下全部只係按「可能五位成人」工作假設做嘅研究候選；唔代表最終同行人數已定、指定日期有房、可合法入住、適合 Uncle 或最後價錢已確認。</p></header>
+      <div class="card notice is-critical"><span class="notice-icon">!</span><div><strong>${bases.length} 個住宿基地仍未完成</strong><p>每站都要獨立核實實際物業、分房床位、Uncle 由落車位到浴室嘅完整路線、最後總價、取消條款同書面證明。</p></div></div>
+      ${airbnbSection}
+      <section class="section"><div class="hotel-grid">${bases.map(base => `<article class="card hotel-card"><div class="hotel-top"><div class="hotel-city">${esc(base.workingNights)}</div><h2>${esc(base.city)}</h2></div><div class="hotel-body"><div class="hotel-status"><span class="chip">研究候選</span>${truthBadge('unknown')}</div><p><b>目前判斷：</b>${esc(base.recommendation)}</p><p><b>酒店比較：</b>${esc(base.hotel)}</p><p><b>整套住宅比較：</b>${esc(base.home)}</p><p><b>仍未證實：</b>${esc(base.researchState)}</p>${base.links?.length ? `<div class="button-row">${base.links.map(link => `<a class="button ghost" href="${esc(safeUrl(link.url))}" target="_blank" rel="noopener">${esc(link.label)} ↗</a>`).join('')}</div>` : ''}</div></article>`).join('')}</div></section>
+      <section class="section"><div class="button-row"><button class="button primary" type="button" data-go="agency">去旅行社逐站記答案同證明</button></div></section>`;
     bindDynamic();
   }
 
   function issueCard(issue, index) {
-    return `<article class="card issue-card"><span class="issue-number">${index + 1}</span><div><div style="display:flex;justify-content:space-between;gap:10px"><h3>${esc(issue.title)}</h3>${truthBadge(issue.status === 'resolved' ? 'verified' : 'unknown')}</div><p>${esc(issue.pdf)}</p><p class="resolution"><b>V1：</b>${esc(issue.resolution || issue.verified || '待旅行社確認。')}</p></div></article>`;
+    return `<article class="card issue-card"><span class="issue-number">${index + 1}</span><div><div style="display:flex;justify-content:space-between;gap:10px"><h3>${esc(issue.title)}</h3>${truthBadge(issue.status === 'resolved' ? 'verified' : 'unknown')}</div><p>${esc(issue.pdf)}</p><p class="resolution"><b>目前處理：</b>${esc(issue.resolution || issue.verified || '待旅行社確認。')}</p></div></article>`;
   }
 
   function flightCard(flight) {
     const source = safeUrl(flight.officialUrl);
-    return `<article class="card flight-card"><div class="flight-no"><span>${esc(flight.flight)}</span>${truthBadge(flight.status)}</div><div class="flight-route"><div><b>${esc(flight.from)}</b><span>${esc(flight.depart)}</span></div><i>→</i><div><b>${esc(flight.to)}</b><span>${esc(flight.arrive)}</span></div></div><div class="flight-note">${esc(flight.note || '')}${source ? ` · <a href="${esc(source)}" target="_blank" rel="noopener">航空公司 route page</a>` : ''}</div></article>`;
+    return `<article class="card flight-card"><div class="flight-no"><span>${esc(flight.flight)}</span>${truthBadge(flight.status)}</div><div class="flight-route"><div><b>${esc(flight.from)}</b><span>${esc(flight.depart)}</span></div><i>→</i><div><b>${esc(flight.to)}</b><span>${esc(flight.arrive)}</span></div></div><div class="flight-note">${esc(flight.note || '')}${source ? ` · <a href="${esc(source)}" target="_blank" rel="noopener">航空公司官方航線頁</a>` : ''}</div></article>`;
   }
 
   function referenceSources() {
@@ -476,12 +580,12 @@
     const unresolved = DATA.issues.filter(issue => issue.status !== 'resolved');
     const references = referenceSources();
     const imageSources = mediaSources();
-    view.innerHTML = `<header class="page-head"><h1>查證中心</h1><p>所有「已查證」只代表官方 public information；機票、酒店、包車同門票仍要以你收到嘅正式 booking record 為準。</p></header>
-      <section class="card notice ${unresolved.length ? 'is-critical' : 'is-good'}"><span class="notice-icon">${unresolved.length ? '!' : '✓'}</span><div><strong>${unresolved.length ? `${unresolved.length} 個核心問題未解決` : '核心問題已解決'}</strong><p>最後資料核查：${esc(DATA.meta.verifiedAt)}。V1 無做任何 booking、付款或對外聯絡。</p></div></section>
-      <section class="section"><div class="section-head"><h2>矛盾／待確認</h2><p>先處理紅色，先至可以升級 V2</p></div><div class="issue-list">${DATA.issues.map(issueCard).join('')}</div></section>
-      <section class="section"><div class="section-head"><h2>航班原稿</h2><p>route page ≠ date-specific ticket</p></div><div class="flight-grid">${DATA.flights.map(flightCard).join('')}</div></section>
+    view.innerHTML = `<header class="page-head"><h1>查證中心</h1><p>「已查證」只代表某項官方公開資料；正式機票、司機、車輛、實際房間、門票同指定日期可用狀態仍要書面確認。</p></header>
+      <section class="card notice ${unresolved.length ? 'is-critical' : 'is-good'}"><span class="notice-icon">${unresolved.length ? '!' : '✓'}</span><div><strong>${unresolved.length ? `${unresolved.length} 個核心問題未解決` : '核心問題已解決'}</strong><p>最後資料核查：${esc(DATA.meta.verifiedAt)}。目前版本冇做任何訂位、付款或對外聯絡。</p></div></section>
+      <section class="section"><div class="section-head"><h2>矛盾／待確認</h2><p>先處理紅色，先可以鎖定行程</p></div><div class="issue-list">${DATA.issues.map(issueCard).join('')}</div></section>
+      <section class="section"><div class="section-head"><h2>舊航班資料同目前暫定日期對照</h2><p>舊文件航班號／鐘數加上目前暫定日期，唔等於正式電子機票</p></div><div class="flight-grid">${DATA.flights.map(flightCard).join('')}</div></section>
       <section class="section"><div class="section-head"><h2>實用資料</h2><p>跨國共通</p></div><div class="issue-list">${(DATA.practical || []).map((item, index) => `<article class="card issue-card"><span class="issue-number">${index + 1}</span><div><div style="display:flex;justify-content:space-between;gap:10px"><h3>${esc(item.title)}</h3>${truthBadge(item.status)}</div><p>${esc(item.detail)}</p>${item.officialUrl ? `<div class="button-row"><a class="button ghost" href="${esc(safeUrl(item.officialUrl))}" target="_blank" rel="noopener">↗ 官方來源</a></div>` : ''}</div></article>`).join('')}</div></section>
-      <section class="section"><div class="section-head"><h2>相片出處／授權</h2><p>${imageSources.length} 張 Commons 相片；節點卡片亦有逐張 attribution</p></div><div class="reference-list">${imageSources.map(media => `<article class="card reference-row"><b>${esc(media.caption || '相片參考')}</b><span>${esc(media.author || '')} · ${esc(media.license || '')}</span><a href="${esc(safeUrl(media.source))}" target="_blank" rel="noopener">原始頁 ↗</a></article>`).join('')}</div></section>
+      <section class="section"><div class="section-head"><h2>相片出處／授權</h2><p>${imageSources.length} 張 Wikimedia Commons 相片；每張行程卡片亦有獨立列明出處</p></div><div class="reference-list">${imageSources.map(media => `<article class="card reference-row"><b>${esc(media.caption || '相片參考')}</b><span>${esc(media.author || '')} · ${esc(media.license || '')}</span><a href="${esc(safeUrl(media.source))}" target="_blank" rel="noopener">原始頁 ↗</a></article>`).join('')}</div></section>
       <section class="section"><div class="section-head"><h2>官方來源索引</h2><p>${references.length} 條已驗證 URL</p></div><div class="reference-list">${references.map(source => `<article class="card reference-row"><b>${esc(source.label)}</b><span>${esc(source.url)}</span><a href="${esc(source.url)}" target="_blank" rel="noopener">開啟 ↗</a></article>`).join('')}</div></section>`;
     bindDynamic();
   }
@@ -489,20 +593,34 @@
   function renderPrint() {
     const info = nowInfo();
     const references = referenceSources();
-    view.innerHTML = `<section class="hero print-cover"><div class="hero-inner"><p class="eyebrow">EUROPE · REFERENCE VERSION 1</p><h1>荷蘭 · 比利時<br>法國 · 瑞士</h1><div class="hero-sub"><span>${esc(DATA.meta.dateRange)}</span><span>官方資料核查 ${esc(DATA.meta.verifiedAt)}</span></div></div></section>
-      <section><h1>使用說明</h1><div class="card notice"><span class="notice-icon">i</span><div><strong>呢份係 reference V1，唔係 booking confirmation</strong><p>綠色＝官方 public information；藍色＝旅行社 PDF 原稿；橙色＝規劃推斷；紅色＝一定要再確認。</p></div></div></section>
+    view.innerHTML = `<section class="hero print-cover"><div class="hero-inner"><p class="eyebrow">EUROPE · 通話整合版</p><h1>荷蘭 · 比利時<br>法國 · 瑞士</h1><div class="hero-sub"><span>${esc(DATA.meta.dateRange)}</span><span>官方資料核查 ${esc(DATA.meta.verifiedAt)}</span></div></div></section>
+      <section><h1>使用說明</h1><div class="card notice"><span class="notice-icon">i</span><div><strong>呢份係目前暫定行程，唔係訂位確認</strong><p>綠色＝官方公開資料；藍色＝旅行社舊文件／通話原稿；橙色＝行程推論；紅色＝一定要再確認。</p></div></div></section>
       <section class="print-section"><h1>核心矛盾</h1><div class="issue-list">${DATA.issues.map(issueCard).join('')}</div></section>
       ${DATA.days.map(day => renderDayDetail(day.id, { print: true, returnHtml: true })).join('')}
       <section class="print-section"><h1>住宿總覽</h1><div class="hotel-grid">${DATA.hotels.map(hotelCard).join('')}</div></section>
-      <section class="print-section"><h1>航班原稿</h1><div class="flight-grid">${DATA.flights.map(flightCard).join('')}</div></section>
+      <section class="print-section"><h1>航班資料對照</h1><div class="flight-grid">${DATA.flights.map(flightCard).join('')}</div></section>
       <section class="print-section"><h1>官方來源索引</h1><div class="reference-list">${references.map(source => `<article class="card reference-row"><b>${esc(source.label)}</b><span>${esc(source.url)}</span><a href="${esc(source.url)}">來源</a></article>`).join('')}</div></section>`;
   }
 
   function go(tab) {
     state.tab = tab;
     state.selectedDay = null;
-    document.querySelectorAll('.tab').forEach(button => button.classList.toggle('is-active', button.dataset.tab === tab));
-    ({ now: renderNow, days: renderDays, route: renderRoute, stays: renderStays, verify: renderVerify }[tab] || renderNow)();
+    if (location.hash !== `#${tab}`) location.hash = tab;
+    document.querySelectorAll('.tab').forEach(button => {
+      const active = button.dataset.tab === tab;
+      button.classList.toggle('is-active', active);
+      if (active) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+    ({
+      now: renderNow,
+      decide: () => window.EUROPE_DECISION_CHECKLIST?.render(view),
+      agency: () => window.EUROPE_DECISION_CHECKLIST?.renderAgency(view),
+      days: renderDays,
+      route: renderRoute,
+      stays: renderStays,
+      verify: renderVerify
+    }[tab] || renderNow)();
     window.scrollTo(0, 0);
   }
 
@@ -514,6 +632,48 @@
       renderDays();
     });
     document.querySelectorAll('[data-notify]').forEach(button => button.onclick = () => enableNotifications(button.dataset.notify));
+    document.querySelectorAll('[data-route-decision]').forEach(input => input.onchange = () => selectRouteDecision(input.value));
+    const copyDecision = document.querySelector('[data-copy-route-decision]');
+    if (copyDecision) copyDecision.onclick = copyRouteDecision;
+  }
+
+  function updateRouteDecisionUI(decision) {
+    document.querySelectorAll('[data-route-decision]').forEach(input => {
+      const selected = Boolean(decision && input.value === decision.id);
+      input.checked = selected;
+      input.closest('.decision-option')?.classList.toggle('is-selected', selected);
+    });
+    const title = document.querySelector('[data-route-answer-title]');
+    const answer = document.querySelector('[data-route-answer-copy]');
+    const copyButton = document.querySelector('[data-copy-route-decision]');
+    const feedback = document.querySelector('[data-route-copy-feedback]');
+    if (title) title.textContent = decision ? decision.title : '未揀';
+    if (answer) answer.textContent = decision ? decision.answer : '撳上面其中一個選擇，我會幫你整理成一句可以直接回覆嘅答案。';
+    if (copyButton) copyButton.disabled = !decision;
+    if (feedback) feedback.textContent = decision ? '已暫存在你部裝置。撳複製，再貼返呢個對話。' : '選擇只會留喺你部裝置，唔會自動訂位、付款或送出。';
+  }
+
+  function selectRouteDecision(id) {
+    const decision = routeDecisionById(id);
+    if (!decision) return;
+    try {
+      localStorage.setItem(ROUTE_DECISION_KEY, decision.id);
+    } catch (_) {}
+    updateRouteDecisionUI(decision);
+  }
+
+  async function copyRouteDecision() {
+    const decision = savedRouteDecision();
+    if (!decision) return;
+    const feedback = document.querySelector('[data-route-copy-feedback]');
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unavailable');
+      await navigator.clipboard.writeText(decision.answer);
+      if (feedback) feedback.textContent = '已複製。返去 Codex 對話貼上就得。';
+    } catch (_) {
+      window.prompt('請複製呢句，再貼返 Codex 對話：', decision.answer);
+      if (feedback) feedback.textContent = '已打開答案，請複製後貼返 Codex 對話。';
+    }
   }
 
   async function enableNotifications(dayId) {
@@ -529,7 +689,7 @@
     }
     const info = nowInfo();
     const upcoming = (day.activities || []).filter(item => clockMinutes(item.time) > info.minutes).slice(0, 8);
-    new Notification('Europe Tour 今日提醒', { body: upcoming.length ? `已讀取 ${upcoming.length} 個之後行程；app 開住時最可靠。` : '今日未有更多固定時間。' });
+    new Notification('Europe Tour 通知測試', { body: upcoming.length ? `測試成功：此刻讀到 ${upcoming.length} 個之後行程。呢個唔係排程通知。` : '測試成功：今日未有更多固定時間。' });
   }
 
   function applyTheme(theme) {
@@ -545,7 +705,7 @@
   }
 
   document.querySelectorAll('.tab').forEach(button => button.onclick = () => go(button.dataset.tab));
-  document.querySelector('.brand').onclick = () => go('now');
+  document.querySelector('.brand').onclick = () => go('decide');
   document.getElementById('themeBtn').onclick = () => {
     const current = localStorage.europe_theme || 'auto';
     applyTheme(current === 'auto' ? 'dark' : current === 'dark' ? 'light' : 'auto');
@@ -554,11 +714,22 @@
   document.getElementById('fontUp').onclick = () => applyFont(fontSize + 1);
   applyTheme(localStorage.europe_theme || 'auto');
   applyFont(fontSize);
+  window.addEventListener('hashchange', () => {
+    if (window.EUROPE_QUESTIONNAIRE_APP?.matchesCurrentUrl()) {
+      window.location.reload();
+      return;
+    }
+    const target = location.hash.replace('#', '');
+    if (['now', 'decide', 'agency', 'days', 'route', 'stays', 'verify'].includes(target) && target !== state.tab) go(target);
+  });
 
+  const initialTab = location.hash.replace('#', '');
   if (params.get('print') === '1') {
     document.body.classList.add('print-mode');
     renderPrint();
+  } else if (['now', 'decide', 'agency', 'days', 'route', 'stays', 'verify'].includes(initialTab)) {
+    go(initialTab);
   } else {
-    renderNow();
+    go('decide');
   }
 })();
